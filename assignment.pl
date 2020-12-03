@@ -161,10 +161,10 @@ loop_and_add_to_top([H|T],X,_,_,[H|R1],D):- loop_and_add_to_top(T,X,_,_,R1,R2), 
 
     1. Move stack 1 to 3;
     2. Move stack 2 to 3;
-    3. Move blocks to stack 1 if they matach the required stack 1, otherwise move to stack 2;
+    3. Move blocks to stack 1 if they match the required stack 1, otherwise move to stack 2;
     4. Check if the order of the 3 stacks matches the required order;
     5. Move stack 2 to stack 3;
-    6. Move blocks to stack 2 if they matach the required stack 2, otherwise move to stack 3;
+    6. Move blocks to stack 2 if they match the required stack 2, otherwise move to stack 3;
     7. Check if the order of the 3 stacks matches the required order;
     8. GOTO step 1 and repeat.
 
