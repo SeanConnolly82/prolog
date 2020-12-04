@@ -154,19 +154,20 @@ loop_and_add_to_top([H|T],X,_,_,[H|R1],D):- loop_and_add_to_top(T,X,_,_,R1,R2), 
 
 
 
-/*** PART 3 ***/
-
 /*
     The methodology I have used is:
-
-    1. Move stack 1 to 3;
-    2. Move stack 2 to 3;
-    3. Move blocks to stack 1 if they match the required stack 1, otherwise move to stack 2;
-    4. Check if the order of the 3 stacks matches the required order;
-    5. Move stack 2 to stack 3;
-    6. Move blocks to stack 2 if they match the required stack 2, otherwise move to stack 3;
-    7. Check if the order of the 3 stacks matches the required order;
-    8. GOTO step 1 and repeat.
+	
+    1. Basecase is if the blocks match the required order;
+    2. Move stack 1 to 3;
+    3. Move stack 2 to 3;
+    4. Move blocks from stack 3 to stack 1 if they match the required stack 1, otherwise move to stack 2;
+    5. Move stack 3 to stack 2;
+    6. Move stack 2 to stack 1;
+    7. Move blocks from stack 1 to stack 2 if they match the required stack 2, otherwise move to stack 3;
+    8. Move stack 1 to 3;
+    9. Move stack 2 to 3;
+    10. Move blocks from stack 3 to stack 1 if they match the required stack 1, otherwise move to stack 2;
+    11. Go to step 1 and repeat.
 
     I have successfully tested on the following scenarios:
 
@@ -181,39 +182,34 @@ loop_and_add_to_top([H|T],X,_,_,[H|R1],D):- loop_and_add_to_top(T,X,_,_,R1,R2), 
 
 */
 
-
-order_blocks(B,B_Order,N):- 
-    move_all_to_three(B,R),
-    check_stack(R,B_Order,1,2,3,A,D), A=B_Order, N is D.
+order_blocks(B,B_Order,0):- 
+    B=B_Order.
 order_blocks(B,B_Order,N):-    
-    move_all_to_three(B,R),
-    check_stack(R,B_Order,1,2,3,A,D1),
-    move_stack(A,_,3,2,Z1),
-    move_stack(Z1,_,2,1,Z2),
-    check_stack(Z2,B_Order,2,3,1,Out,D2), Out=B_Order, N is D1+D2.
-order_blocks(B,B_Order,N):-    
-    move_all_to_three(B,R),
-    check_stack(R,B_Order,1,2,3,A,D1),
-    move_stack(A,_,3,2,Z1),
-    move_stack(Z1,_,2,1,Z2),
-    check_stack(Z2,B_Order,2,3,1,Out,D2),
-    order_blocks(Out,B_Order,All), N is All+D1+D2.
+    move_all_to_three(B,R,D1),
+    re_order_stack(R,B_Order,1,2,3,A,D2),
+    move_stack(A,_,3,2,Z1,D3),
+    move_stack(Z1,_,2,1,Z2,D4),
+    re_order_stack(Z2,B_Order,2,3,1,Z3,D5),
+    move_all_to_three(Z3,Z4,D6),
+    re_order_stack(Z4,B_Order,1,2,3,Out,D7),
+    order_blocks(Out,B_Order,All), N is All+D1+D2+D3+D4+D5+D6+D7.
 
-move_stack(L,_,Y,_,L):- nth1(Y,L,Stack), Stack=[].
-move_stack(L,_,Y,Z,Final):- 
+move_stack(L,_,Y,_,L,0):- nth1(Y,L,Stack), Stack=[].
+move_stack(L,_,Y,Z,Final,D):-
     order_blocks_remove_by_stack(L,[X|_],Y,_,Removed,_),
     order_blocks_add_by_stack(Removed,X,_,Z,Output,_),
-    move_stack(Output,_,Y,Z,Final).
+    move_stack(Output,_,Y,Z,Final,R),D is R+1.
 
-move_all_to_three(L,[H|X]):- 
-    move_stack(L,_,1,3,[H|T]),
-    move_stack(T,_,1,2,X).  
+move_all_to_three(L,B,D):- 
+    move_stack(L,_,1,3,A,R),
+    move_stack(A,_,2,3,B,R1),
+    D is R+R1.
 
-check_stack(R,L,X,_,_,R,0):- 
+re_order_stack(R,L,X,_,_,R,0):- 
     nth1(X,L,[]).
-check_stack(L,_,_,_,Z,L,0):- 
+re_order_stack(L,_,_,_,Z,L,0):- 
     nth1(Z,L,[]).
-check_stack(L,B,X,Y,Z,Result,D):- 
+re_order_stack(L,B,X,Y,Z,Result,D):- 
     nth1(X,B,[First|_]),
     nth1(Z,L,S3),
     reverse(S3,[M|_]),
@@ -221,15 +217,15 @@ check_stack(L,B,X,Y,Z,Result,D):-
     order_blocks_remove_by_stack(L,[M],Z,_,Removed,_),
     remove_item_loop(B,First,B_Update),
     order_blocks_add_by_stack(Removed,First,_,X,Added,_),
-    check_stack(Added,B_Update,X,Y,Z,Result,R1), D is R1+1.
-check_stack(L,B,X,Y,Z,Result,D):- 
+    re_order_stack(Added,B_Update,X,Y,Z,Result,R1), D is R1+1.
+re_order_stack(L,B,X,Y,Z,Result,D):- 
     nth1(X,B,[First|_]),
     nth1(Z,L,S3),
     reverse(S3,[M|_]),
     M\=First,
     order_blocks_remove_by_stack(L,[M],Z,_,Removed,_),
     order_blocks_add_by_stack(Removed,M,_,Y,Added,_),
-    check_stack(Added,B,X,Y,Z,Result,R1), D is R1+1.
+    re_order_stack(Added,B,X,Y,Z,Result,R1), D is R1+1.
  
 remove_item_loop([],_,[]).
 remove_item_loop([H|T],I,[R|R1]):- remove_item(H,I,R), remove_item_loop(T,I,R1).
@@ -239,11 +235,13 @@ remove_item([H|T],I,T):- H=I.
 remove_item([H|T],I,[H|R1]):- H\=I, remove_item(T,I,R1).
 
 order_blocks_remove_by_stack(L,X,Y,_,A,D):- Y=D, 
-    order_blocks_loop_and_remove_from_top(L,X,_,_,A,D).
-    
+    order_blocks_loop_and_remove_from_top(L,X,_,_,A,D),
+    write('Moved '), write(X), write(' from Stack '), write(Y).
+
 order_blocks_add_by_stack(L,X,_,Z,A,D):- Z=D, 
     order_blocks_loop_and_add_to_top(L,X,_,_,A,D),
-    print_status(A),nl.
+    write(' to Stack '), write(Z), nl, nl,
+   	order_blocks_print_status(A), nl.
 
 order_blocks_loop_and_remove_from_top([[]|T],[],_,_,[[]|T],1).
 order_blocks_loop_and_remove_from_top([H|T],[X],_,_,[R|T],1):- order_blocks_remove_from_top(H,R,X).
@@ -255,6 +253,14 @@ order_blocks_remove_from_top(L,R,X):- reverse(L,[A|B]), A=X, reverse(B,R).
 order_blocks_loop_and_add_to_top([[]|T],X,_,_,[[X]|T],1).
 order_blocks_loop_and_add_to_top([H|T],X,_,_,[R|T],1):- reverse(H,[A|_]), A\=X, append(H,[X],R).
 order_blocks_loop_and_add_to_top([H|T],X,_,_,[H|R1],D):- order_blocks_loop_and_add_to_top(T,X,_,_,R1,R2), D is R2+1.
+
+order_blocks_print_status([]).
+order_blocks_print_status([H|T]):- write(' | '), order_blocks_print_list(H), nl, order_blocks_print_status(T).
+order_blocks_print_list([]).
+order_blocks_print_list([H|T]):- write(H), write(' | '), order_blocks_print_list(T).
+
+order_blocks_len_list([],0).
+order_blocks_len_list([_|T],R):- order_blocks_len_list(T,R1), R is R1 + 1.
 
 
 
